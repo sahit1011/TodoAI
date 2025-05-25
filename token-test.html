@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Token Test</h1>
+    
+    <div>
+        <h2>1. Test with Hardcoded Token</h2>
+        <p>This will test the API with a hardcoded token.</p>
+        <button id="hardcodedTokenBtn">Test Hardcoded Token</button>
+        <div id="hardcodedTokenOutput"></div>
+    </div>
+    
+    <div>
+        <h2>2. Test with Login Token</h2>
+        <p>This will login and then test the API with the received token.</p>
+        <button id="loginTokenBtn">Test Login Token</button>
+        <div id="loginTokenOutput"></div>
+    </div>
+    
+    <div>
+        <h2>3. Test with Different Token Format</h2>
+        <p>This will test different ways of sending the token.</p>
+        <button id="tokenFormatBtn">Test Token Format</button>
+        <div id="tokenFormatOutput"></div>
+    </div>
+    
+    <script>
+        // Hardcoded token
+        const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc0NDQwODQ3Mn0.hW9PYGhLPzX5XAC7ieVeMcdqjmyeOBZBcjRHN2u_dvc';
+        
+        // Helper functions
+        function appendOutput(elementId, message, isError = false) {
+            const outputElement = document.getElementById(elementId);
+            const messageElement = document.createElement('div');
+            messageElement.className = isError ? 'error' : 'success';
+            messageElement.textContent = message;
+            outputElement.appendChild(messageElement);
+        }
+        
+        function appendJsonOutput(elementId, data) {
+            const outputElement = document.getElementById(elementId);
+            const preElement = document.createElement('pre');
+            preElement.textContent = JSON.stringify(data, null, 2);
+            outputElement.appendChild(preElement);
+        }
+        
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // 1. Test with Hardcoded Token
+        document.getElementById('hardcodedTokenBtn').addEventListener('click', async () => {
+            clearOutput('hardcodedTokenOutput');
+            appendOutput('hardcodedTokenOutput', 'Testing with hardcoded token...');
+            
+            try {
+                // Test 1: Standard format
+                appendOutput('hardcodedTokenOutput', 'Test 1: Standard format');
+                const response1 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('hardcodedTokenOutput', `Response status: ${response1.status} ${response1.statusText}`);
+                
+                if (response1.ok) {
+                    const data = await response1.json();
+                    appendOutput('hardcodedTokenOutput', `Successfully fetched ${data.length} tasks.`);
+                } else {
+                    const errorText = await response1.text();
+                    appendOutput('hardcodedTokenOutput', `Error response: ${errorText}`, true);
+                }
+                
+                // Test 2: Direct URL
+                appendOutput('hardcodedTokenOutput', '\nTest 2: Direct URL');
+                const response2 = await fetch(`http://localhost:8000/api/tasks/`, {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('hardcodedTokenOutput', `Response status: ${response2.status} ${response2.statusText}`);
+                
+                if (response2.ok) {
+                    const data = await response2.json();
+                    appendOutput('hardcodedTokenOutput', `Successfully fetched ${data.length} tasks.`);
+                } else {
+                    const errorText = await response2.text();
+                    appendOutput('hardcodedTokenOutput', `Error response: ${errorText}`, true);
+                }
+                
+                // Test 3: No trailing slash
+                appendOutput('hardcodedTokenOutput', '\nTest 3: No trailing slash');
+                const response3 = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('hardcodedTokenOutput', `Response status: ${response3.status} ${response3.statusText}`);
+                
+                if (response3.ok) {
+                    const data = await response3.json();
+                    appendOutput('hardcodedTokenOutput', `Successfully fetched ${data.length} tasks.`);
+                } else {
+                    const errorText = await response3.text();
+                    appendOutput('hardcodedTokenOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('hardcodedTokenOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 2. Test with Login Token
+        document.getElementById('loginTokenBtn').addEventListener('click', async () => {
+            clearOutput('loginTokenOutput');
+            appendOutput('loginTokenOutput', 'Testing with login token...');
+            
+            try {
+                // Login to get token
+                appendOutput('loginTokenOutput', 'Logging in...');
+                const loginResponse = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: 'testuser',
+                        password: 'password123',
+                    }),
+                });
+                
+                if (!loginResponse.ok) {
+                    const errorText = await loginResponse.text();
+                    appendOutput('loginTokenOutput', `Login failed: ${errorText}`, true);
+                    return;
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access_token;
+                appendOutput('loginTokenOutput', `Login successful! Token: ${token.substring(0, 20)}...`);
+                
+                // Test with the login token
+                appendOutput('loginTokenOutput', '\nFetching tasks with login token...');
+                const tasksResponse = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                appendOutput('loginTokenOutput', `Response status: ${tasksResponse.status} ${tasksResponse.statusText}`);
+                
+                if (tasksResponse.ok) {
+                    const data = await tasksResponse.json();
+                    appendOutput('loginTokenOutput', `Successfully fetched ${data.length} tasks.`);
+                    appendJsonOutput('loginTokenOutput', data);
+                } else {
+                    const errorText = await tasksResponse.text();
+                    appendOutput('loginTokenOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('loginTokenOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 3. Test with Different Token Format
+        document.getElementById('tokenFormatBtn').addEventListener('click', async () => {
+            clearOutput('tokenFormatOutput');
+            appendOutput('tokenFormatOutput', 'Testing different token formats...');
+            
+            try {
+                // Test 1: Standard format
+                appendOutput('tokenFormatOutput', 'Test 1: Standard format (Bearer token)');
+                const response1 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('tokenFormatOutput', `Response status: ${response1.status} ${response1.statusText}`);
+                
+                // Test 2: No space after Bearer
+                appendOutput('tokenFormatOutput', '\nTest 2: No space after Bearer');
+                const response2 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('tokenFormatOutput', `Response status: ${response2.status} ${response2.statusText}`);
+                
+                // Test 3: No Bearer prefix
+                appendOutput('tokenFormatOutput', '\nTest 3: No Bearer prefix');
+                const response3 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': HARDCODED_TOKEN
+                    }
+                });
+                
+                appendOutput('tokenFormatOutput', `Response status: ${response3.status} ${response3.statusText}`);
+                
+                // Test 4: Different case for Bearer
+                appendOutput('tokenFormatOutput', '\nTest 4: Different case for Bearer');
+                const response4 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('tokenFormatOutput', `Response status: ${response4.status} ${response4.statusText}`);
+                
+                // Test 5: Using fetch with credentials
+                appendOutput('tokenFormatOutput', '\nTest 5: Using fetch with credentials');
+                const response5 = await fetch('/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    },
+                    credentials: 'include'
+                });
+                
+                appendOutput('tokenFormatOutput', `Response status: ${response5.status} ${response5.statusText}`);
+                
+                // Test 6: Using XMLHttpRequest
+                appendOutput('tokenFormatOutput', '\nTest 6: Using XMLHttpRequest');
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/tasks/', true);
+                xhr.setRequestHeader('Authorization', `Bearer ${HARDCODED_TOKEN}`);
+                
+                xhr.onload = function() {
+                    appendOutput('tokenFormatOutput', `XHR Response status: ${xhr.status} ${xhr.statusText}`);
+                    
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            appendOutput('tokenFormatOutput', `Successfully fetched ${data.length} tasks.`);
+                        } catch (e) {
+                            appendOutput('tokenFormatOutput', `Error parsing response: ${e.message}`, true);
+                        }
+                    } else {
+                        appendOutput('tokenFormatOutput', `Error response: ${xhr.responseText}`, true);
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    appendOutput('tokenFormatOutput', 'XHR request failed', true);
+                };
+                
+                xhr.send();
+            } catch (error) {
+                appendOutput('tokenFormatOutput', `Error: ${error.message}`, true);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Direct API Test</h1>
+    
+    <div>
+        <h2>Test Direct API Call</h2>
+        <p>This will test the API directly without using the proxy.</p>
+        <button id="directApiBtn">Test Direct API Call</button>
+        <div id="directApiOutput"></div>
+    </div>
+    
+    <script>
+        // Hardcoded token
+        const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc0NDQwODQ3Mn0.hW9PYGhLPzX5XAC7ieVeMcdqjmyeOBZBcjRHN2u_dvc';
+        
+        // Helper functions
+        function appendOutput(elementId, message, isError = false) {
+            const outputElement = document.getElementById(elementId);
+            const messageElement = document.createElement('div');
+            messageElement.className = isError ? 'error' : 'success';
+            messageElement.textContent = message;
+            outputElement.appendChild(messageElement);
+        }
+        
+        function appendJsonOutput(elementId, data) {
+            const outputElement = document.getElementById(elementId);
+            const preElement = document.createElement('pre');
+            preElement.textContent = JSON.stringify(data, null, 2);
+            outputElement.appendChild(preElement);
+        }
+        
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // Test Direct API Call
+        document.getElementById('directApiBtn').addEventListener('click', async () => {
+            clearOutput('directApiOutput');
+            appendOutput('directApiOutput', 'Testing direct API call...');
+            
+            try {
+                // Make a direct API call to the backend
+                const response = await fetch('http://localhost:8000/api/tasks/', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('directApiOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('directApiOutput', `Successfully fetched ${data.length} tasks.`);
+                    appendJsonOutput('directApiOutput', data);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('directApiOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('directApiOutput', `Error: ${error.message}`, true);
+            }
+        });
+    </script>
+</body>
+</html>

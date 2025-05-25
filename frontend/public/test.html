@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Tasks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .task-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .task-title {
+            font-weight: bold;
+        }
+        .task-priority-high {
+            border-left: 5px solid red;
+        }
+        .task-priority-medium {
+            border-left: 5px solid orange;
+        }
+        .task-priority-low {
+            border-left: 5px solid green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Tasks</h1>
+    
+    <div>
+        <button id="loginBtn">Login</button>
+        <button id="getTasksBtn">Get Tasks</button>
+    </div>
+    
+    <div id="loginOutput"></div>
+    
+    <h2>Tasks</h2>
+    <div id="tasksContainer"></div>
+    
+    <h2>Raw Output</h2>
+    <pre id="output"></pre>
+
+    <script>
+        // Login function
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: 'testuser',
+                        password: 'password123',
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Login failed');
+                }
+
+                const data = await response.json();
+                localStorage.setItem('token', data.access_token);
+                
+                document.getElementById('loginOutput').innerHTML = `
+                    <p style="color: green;">Login successful!</p>
+                    <p>Token: ${data.access_token.substring(0, 20)}...</p>
+                `;
+            } catch (error) {
+                document.getElementById('loginOutput').innerHTML = `
+                    <p style="color: red;">Login error: ${error.message}</p>
+                `;
+            }
+        });
+
+        // Get tasks function
+        document.getElementById('getTasksBtn').addEventListener('click', async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('No token found. Please login first.');
+                }
+
+                const response = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch tasks');
+                }
+
+                const tasks = await response.json();
+                
+                // Display raw output
+                document.getElementById('output').textContent = JSON.stringify(tasks, null, 2);
+                
+                // Display tasks in a nice format
+                const tasksContainer = document.getElementById('tasksContainer');
+                tasksContainer.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    tasksContainer.innerHTML = '<p>No tasks found.</p>';
+                } else {
+                    tasks.forEach(task => {
+                        const taskElement = document.createElement('div');
+                        taskElement.className = `task-item task-priority-${task.priority}`;
+                        
+                        taskElement.innerHTML = `
+                            <div class="task-title">${task.title}</div>
+                            <div>${task.description || 'No description'}</div>
+                            <div>Priority: ${task.priority}</div>
+                            <div>Status: ${task.status}</div>
+                        `;
+                        
+                        tasksContainer.appendChild(taskElement);
+                    });
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = `Error fetching tasks: ${error.message}`;
+                document.getElementById('tasksContainer').innerHTML = `
+                    <p style="color: red;">Error: ${error.message}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

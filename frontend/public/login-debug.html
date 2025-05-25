@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        input {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Login Debug</h1>
+    
+    <div>
+        <h2>1. Direct Login Test</h2>
+        <p>This will test logging in directly with the API.</p>
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" value="testuser">
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="password123">
+        </div>
+        <button id="directLoginBtn">Test Direct Login</button>
+        <div id="directLoginOutput"></div>
+    </div>
+    
+    <div>
+        <h2>2. Form-Encoded Login Test</h2>
+        <p>This will test logging in with form-encoded data.</p>
+        <button id="formLoginBtn">Test Form-Encoded Login</button>
+        <div id="formLoginOutput"></div>
+    </div>
+    
+    <div>
+        <h2>3. JSON Login Test</h2>
+        <p>This will test logging in with JSON data.</p>
+        <button id="jsonLoginBtn">Test JSON Login</button>
+        <div id="jsonLoginOutput"></div>
+    </div>
+    
+    <script>
+        // Helper functions
+        function appendOutput(elementId, message, isError = false) {
+            const outputElement = document.getElementById(elementId);
+            const messageElement = document.createElement('div');
+            messageElement.className = isError ? 'error' : 'success';
+            messageElement.textContent = message;
+            outputElement.appendChild(messageElement);
+        }
+        
+        function appendJsonOutput(elementId, data) {
+            const outputElement = document.getElementById(elementId);
+            const preElement = document.createElement('pre');
+            preElement.textContent = JSON.stringify(data, null, 2);
+            outputElement.appendChild(preElement);
+        }
+        
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // 1. Direct Login Test
+        document.getElementById('directLoginBtn').addEventListener('click', async () => {
+            clearOutput('directLoginOutput');
+            appendOutput('directLoginOutput', 'Testing direct login...');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // Direct API call
+                const response = await fetch('http://localhost:8000/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username,
+                        password,
+                    }),
+                });
+                
+                appendOutput('directLoginOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('directLoginOutput', 'Login successful!');
+                    appendOutput('directLoginOutput', `Token: ${data.access_token.substring(0, 20)}...`);
+                    
+                    // Store token in localStorage
+                    localStorage.setItem('token', data.access_token);
+                    appendOutput('directLoginOutput', 'Token stored in localStorage.');
+                    
+                    // Try to decode token
+                    try {
+                        const tokenParts = data.access_token.split('.');
+                        const payload = JSON.parse(atob(tokenParts[1]));
+                        appendOutput('directLoginOutput', 'Token decoded successfully.');
+                        appendJsonOutput('directLoginOutput', payload);
+                    } catch (e) {
+                        appendOutput('directLoginOutput', `Error decoding token: ${e.message}`, true);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('directLoginOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('directLoginOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 2. Form-Encoded Login Test
+        document.getElementById('formLoginBtn').addEventListener('click', async () => {
+            clearOutput('formLoginOutput');
+            appendOutput('formLoginOutput', 'Testing form-encoded login...');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // Form-encoded API call
+                const response = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username,
+                        password,
+                    }),
+                });
+                
+                appendOutput('formLoginOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('formLoginOutput', 'Login successful!');
+                    appendOutput('formLoginOutput', `Token: ${data.access_token.substring(0, 20)}...`);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('formLoginOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('formLoginOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 3. JSON Login Test
+        document.getElementById('jsonLoginBtn').addEventListener('click', async () => {
+            clearOutput('jsonLoginOutput');
+            appendOutput('jsonLoginOutput', 'Testing JSON login...');
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                // JSON API call
+                const response = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                    }),
+                });
+                
+                appendOutput('jsonLoginOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('jsonLoginOutput', 'Login successful!');
+                    appendOutput('jsonLoginOutput', `Token: ${data.access_token.substring(0, 20)}...`);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('jsonLoginOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('jsonLoginOutput', `Error: ${error.message}`, true);
+            }
+        });
+    </script>
+</body>
+</html>

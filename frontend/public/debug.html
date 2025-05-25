@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Todo AI Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .task-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .task-title {
+            font-weight: bold;
+        }
+        .task-priority-high {
+            border-left: 5px solid red;
+        }
+        .task-priority-medium {
+            border-left: 5px solid orange;
+        }
+        .task-priority-low {
+            border-left: 5px solid green;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo AI Debug Page</h1>
+    
+    <div class="section">
+        <h2>1. Direct API Test</h2>
+        <p>This will test the API directly with a hardcoded token.</p>
+        <button id="directTestBtn">Run Direct API Test</button>
+        <div id="directTestOutput"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. Login Test</h2>
+        <p>This will test the login functionality.</p>
+        <button id="loginTestBtn">Run Login Test</button>
+        <div id="loginTestOutput"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Task Fetch Test</h2>
+        <p>This will test fetching tasks after login.</p>
+        <button id="taskFetchTestBtn">Run Task Fetch Test</button>
+        <div id="taskFetchTestOutput"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. Create Task Test</h2>
+        <p>This will test creating a new task.</p>
+        <button id="createTaskTestBtn">Run Create Task Test</button>
+        <div id="createTaskTestOutput"></div>
+    </div>
+    
+    <div class="section">
+        <h2>5. Full Flow Test</h2>
+        <p>This will test the entire flow: login, fetch tasks, create task, fetch tasks again.</p>
+        <button id="fullFlowTestBtn">Run Full Flow Test</button>
+        <div id="fullFlowTestOutput"></div>
+    </div>
+    
+    <script>
+        // Hardcoded token that we know works
+        const HARDCODED_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc0NDQwODQ3Mn0.hW9PYGhLPzX5XAC7ieVeMcdqjmyeOBZBcjRHN2u_dvc';
+        
+        // Test credentials
+        const TEST_USERNAME = 'testuser';
+        const TEST_PASSWORD = 'password123';
+        
+        // Helper function to append output
+        function appendOutput(elementId, message, isError = false) {
+            const outputElement = document.getElementById(elementId);
+            const messageElement = document.createElement('div');
+            messageElement.className = isError ? 'error' : 'success';
+            messageElement.textContent = message;
+            outputElement.appendChild(messageElement);
+        }
+        
+        // Helper function to append JSON output
+        function appendJsonOutput(elementId, data) {
+            const outputElement = document.getElementById(elementId);
+            const preElement = document.createElement('pre');
+            preElement.textContent = JSON.stringify(data, null, 2);
+            outputElement.appendChild(preElement);
+        }
+        
+        // Helper function to clear output
+        function clearOutput(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // 1. Direct API Test
+        document.getElementById('directTestBtn').addEventListener('click', async () => {
+            clearOutput('directTestOutput');
+            appendOutput('directTestOutput', 'Running direct API test...');
+            
+            try {
+                const response = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                    }
+                });
+                
+                appendOutput('directTestOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('directTestOutput', `Successfully fetched ${data.length} tasks.`);
+                    appendJsonOutput('directTestOutput', data);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('directTestOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('directTestOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 2. Login Test
+        document.getElementById('loginTestBtn').addEventListener('click', async () => {
+            clearOutput('loginTestOutput');
+            appendOutput('loginTestOutput', 'Running login test...');
+            
+            try {
+                const response = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: TEST_USERNAME,
+                        password: TEST_PASSWORD,
+                    }),
+                });
+                
+                appendOutput('loginTestOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('loginTestOutput', 'Login successful!');
+                    appendOutput('loginTestOutput', `Token: ${data.access_token.substring(0, 20)}...`);
+                    
+                    // Store token in localStorage
+                    localStorage.setItem('token', data.access_token);
+                    appendOutput('loginTestOutput', 'Token stored in localStorage.');
+                    
+                    // Try to decode token
+                    try {
+                        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                        appendOutput('loginTestOutput', 'Token decoded successfully.');
+                        appendJsonOutput('loginTestOutput', payload);
+                    } catch (decodeError) {
+                        appendOutput('loginTestOutput', `Error decoding token: ${decodeError.message}`, true);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('loginTestOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('loginTestOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 3. Task Fetch Test
+        document.getElementById('taskFetchTestBtn').addEventListener('click', async () => {
+            clearOutput('taskFetchTestOutput');
+            appendOutput('taskFetchTestOutput', 'Running task fetch test...');
+            
+            // Get token from localStorage
+            const token = localStorage.getItem('token');
+            if (!token) {
+                appendOutput('taskFetchTestOutput', 'No token found in localStorage. Please run the login test first.', true);
+                return;
+            }
+            
+            appendOutput('taskFetchTestOutput', `Using token from localStorage: ${token.substring(0, 20)}...`);
+            
+            try {
+                const response = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                appendOutput('taskFetchTestOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('taskFetchTestOutput', `Successfully fetched ${data.length} tasks.`);
+                    appendJsonOutput('taskFetchTestOutput', data);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('taskFetchTestOutput', `Error response: ${errorText}`, true);
+                    
+                    // If unauthorized, try with hardcoded token
+                    if (response.status === 401) {
+                        appendOutput('taskFetchTestOutput', 'Trying with hardcoded token...');
+                        
+                        const retryResponse = await fetch('/api/tasks', {
+                            headers: {
+                                'Authorization': `Bearer ${HARDCODED_TOKEN}`
+                            }
+                        });
+                        
+                        appendOutput('taskFetchTestOutput', `Retry response status: ${retryResponse.status} ${retryResponse.statusText}`);
+                        
+                        if (retryResponse.ok) {
+                            const retryData = await retryResponse.json();
+                            appendOutput('taskFetchTestOutput', `Successfully fetched ${retryData.length} tasks with hardcoded token.`);
+                            appendJsonOutput('taskFetchTestOutput', retryData);
+                            
+                            // Store hardcoded token in localStorage
+                            localStorage.setItem('token', HARDCODED_TOKEN);
+                            appendOutput('taskFetchTestOutput', 'Hardcoded token stored in localStorage.');
+                        } else {
+                            const retryErrorText = await retryResponse.text();
+                            appendOutput('taskFetchTestOutput', `Retry error response: ${retryErrorText}`, true);
+                        }
+                    }
+                }
+            } catch (error) {
+                appendOutput('taskFetchTestOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 4. Create Task Test
+        document.getElementById('createTaskTestBtn').addEventListener('click', async () => {
+            clearOutput('createTaskTestOutput');
+            appendOutput('createTaskTestOutput', 'Running create task test...');
+            
+            // Get token from localStorage or use hardcoded token
+            const token = localStorage.getItem('token') || HARDCODED_TOKEN;
+            appendOutput('createTaskTestOutput', `Using token: ${token.substring(0, 20)}...`);
+            
+            // Create a task with a timestamp to make it unique
+            const timestamp = new Date().toISOString();
+            const taskData = {
+                title: `Debug Task ${timestamp}`,
+                description: 'This task was created from the debug page',
+                priority: 'high'
+            };
+            
+            try {
+                const response = await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(taskData)
+                });
+                
+                appendOutput('createTaskTestOutput', `Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appendOutput('createTaskTestOutput', 'Task created successfully!');
+                    appendJsonOutput('createTaskTestOutput', data);
+                } else {
+                    const errorText = await response.text();
+                    appendOutput('createTaskTestOutput', `Error response: ${errorText}`, true);
+                }
+            } catch (error) {
+                appendOutput('createTaskTestOutput', `Error: ${error.message}`, true);
+            }
+        });
+        
+        // 5. Full Flow Test
+        document.getElementById('fullFlowTestBtn').addEventListener('click', async () => {
+            clearOutput('fullFlowTestOutput');
+            appendOutput('fullFlowTestOutput', 'Running full flow test...');
+            
+            // Step 1: Login
+            appendOutput('fullFlowTestOutput', '1. Logging in...');
+            try {
+                const loginResponse = await fetch('/api/auth/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        username: TEST_USERNAME,
+                        password: TEST_PASSWORD,
+                    }),
+                });
+                
+                let token;
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    token = loginData.access_token;
+                    localStorage.setItem('token', token);
+                    appendOutput('fullFlowTestOutput', 'Login successful!');
+                } else {
+                    appendOutput('fullFlowTestOutput', 'Login failed, using hardcoded token.');
+                    token = HARDCODED_TOKEN;
+                    localStorage.setItem('token', token);
+                }
+                
+                // Step 2: Fetch Tasks
+                appendOutput('fullFlowTestOutput', '2. Fetching tasks...');
+                const tasksResponse = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (tasksResponse.ok) {
+                    const tasksData = await tasksResponse.json();
+                    appendOutput('fullFlowTestOutput', `Successfully fetched ${tasksData.length} tasks.`);
+                } else {
+                    appendOutput('fullFlowTestOutput', `Failed to fetch tasks: ${tasksResponse.status} ${tasksResponse.statusText}`, true);
+                }
+                
+                // Step 3: Create Task
+                appendOutput('fullFlowTestOutput', '3. Creating a new task...');
+                const timestamp = new Date().toISOString();
+                const taskData = {
+                    title: `Full Flow Task ${timestamp}`,
+                    description: 'This task was created during the full flow test',
+                    priority: 'medium'
+                };
+                
+                const createResponse = await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (createResponse.ok) {
+                    const createData = await createResponse.json();
+                    appendOutput('fullFlowTestOutput', 'Task created successfully!');
+                } else {
+                    appendOutput('fullFlowTestOutput', `Failed to create task: ${createResponse.status} ${createResponse.statusText}`, true);
+                }
+                
+                // Step 4: Fetch Tasks Again
+                appendOutput('fullFlowTestOutput', '4. Fetching tasks again...');
+                const tasksResponse2 = await fetch('/api/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (tasksResponse2.ok) {
+                    const tasksData2 = await tasksResponse2.json();
+                    appendOutput('fullFlowTestOutput', `Successfully fetched ${tasksData2.length} tasks.`);
+                    appendJsonOutput('fullFlowTestOutput', tasksData2);
+                } else {
+                    appendOutput('fullFlowTestOutput', `Failed to fetch tasks: ${tasksResponse2.status} ${tasksResponse2.statusText}`, true);
+                }
+                
+                appendOutput('fullFlowTestOutput', 'Full flow test completed!');
+            } catch (error) {
+                appendOutput('fullFlowTestOutput', `Error during full flow test: ${error.message}`, true);
+            }
+        });
+    </script>
+</body>
+</html>
